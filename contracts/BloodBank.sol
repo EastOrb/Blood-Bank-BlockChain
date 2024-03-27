@@ -81,33 +81,37 @@ contract BloodBank {
         return true;
     }
 
-    function grantDonorPermission(address donorAddress) public {
-        require(!allowedDonors[donorAddress], "Donor already has permission");
-        allowedDonors[donorAddress] = true;
-        emit DonorPermissionGranted(donorAddress);
-    }
+    3. grantDonorPermission(address donorAddress):
+function grantDonorPermission(address donorAddress) public isAdmin {
+    require(!allowedDonors[donorAddress], "Donor already has permission");
+    allowedDonors[donorAddress] = true;
+    emit DonorPermissionGranted(donorAddress);
+}
 
-    function revokeDonorPermission(address donorAddress) public {
-        require(allowedDonors[donorAddress], "Donor does not have permission");
-        allowedDonors[donorAddress] = false;
-        emit DonorPermissionRevoked(donorAddress);
-    }
+    revokeDonorPermission(address donorAddress):
+function revokeDonorPermission(address donorAddress) public isAdmin {
+    require(allowedDonors[donorAddress], "Donor does not have permission");
+    allowedDonors[donorAddress] = false;
+    emit DonorPermissionRevoked(donorAddress);
+}
 
     function isDonorAllowed(address donorAddress) public view returns (bool) {
         return allowedDonors[donorAddress];
     }
 
-    function grantPatientPermission(address patientAddress) public {
-        require(!allowedPatients[patientAddress], "Patient already has permission");
-        allowedPatients[patientAddress] = true;
-        emit PatientPermissionGranted(patientAddress);
-    }
+    grantPatientPermission(address patientAddress):
+function grantPatientPermission(address patientAddress) public isAdmin {
+    require(!allowedPatients[patientAddress], "Patient already has permission");
+    allowedPatients[patientAddress] = true;
+    emit PatientPermissionGranted(patientAddress);
+}
 
-    function revokePatientPermission(address patientAddress) public {
-        require(allowedPatients[patientAddress], "Patient does not have permission");
-        allowedPatients[patientAddress] = false;
-        emit PatientPermissionRevoked(patientAddress);
-    }
+    revokePatientPermission(address patientAddress):
+function revokePatientPermission(address patientAddress) public isAdmin {
+    require(allowedPatients[patientAddress], "Patient does not have permission");
+    allowedPatients[patientAddress] = false;
+    emit PatientPermissionRevoked(patientAddress);
+}
 
     function isPatientAllowed(address patientAddress) public view returns (bool) {
         return allowedPatients[patientAddress];
@@ -145,26 +149,30 @@ contract BloodBank {
         require(hospitals[hospitalAddress].isRegistered, "Hospital not registered");
         return (hospitals[hospitalAddress].name, hospitals[hospitalAddress].location);
     }
-    function donateBlood(BloodType bloodType, uint amount) public {
-    require(donors[msg.sender].isRegistered, "Donor not registered");       
+    donateBlood(BloodType bloodType, uint amount):
+function donateBlood(BloodType bloodType, uint amount) public {
+    require(donors[msg.sender].isRegistered, "Donor not registered");
+    require(allowedDonors[msg.sender], "Donor not allowed to donate blood");
+    // Additional checks if required
+    require(amount > 0, "Invalid amount");
+    
     // Assuming a simplified storage for blood donation amounts
-    donorBalances[msg.sender][bloodType]++;
+    donorBalances[msg.sender][bloodType] += amount;
     totalBloodDonated += amount;  // Increment the total blood donated
     emit BloodDonated(msg.sender, bloodType, amount);
 }
-
-    // Function to get the total amount of blood donated
-    function getTotalBloodDonated() public view returns (uint) {
-        return totalBloodDonated;
-    }
 
     // Function to get the blood inventory for a specific blood type
     function getBloodInventory(BloodType bloodType) public view returns (uint) {
         return bloodInventory[bloodType];
     }
 
-function requestBlood(BloodType bloodType, uint amount) public {
+requestBlood(BloodType bloodType, uint amount):
+function requestBlood(BloodType bloodType, uint amount) public onlyAdminOrPatient {
     require(patients[msg.sender].isRegistered, "You need to register as a patient first");
+    // Additional checks if required
+    require(amount > 0, "Invalid amount");
+    
     // Create a new request object
     Request memory newRequest = Request({
         isResponded: false,
@@ -187,7 +195,8 @@ function getPatientRequests(address patientAddress, BloodType bloodType) public 
     return result;
 }
 
- function respondToRequest(address patientAddress, BloodType bloodType, bool response) public {
+ respondToRequest(address patientAddress, BloodType bloodType, bool response):
+function respondToRequest(address patientAddress, BloodType bloodType, bool response) public onlyAdminOrPatient {
     require(patients[patientAddress].isRegistered, "Patient not registered");
     require(patientRequests[patientAddress][bloodType].length > 0, "No blood donation request found");
 
@@ -204,13 +213,5 @@ function getPatientRequests(address patientAddress, BloodType bloodType) public 
     // Emit event for responding to blood donation request
     emit RequestResponded(patientAddress, response, lastRequest.bloodType, lastRequest.amount);
 }
-
-    // Add a function to retrieve patient responses
-    function getPatientResponses(address patientAddress) public view returns (Request[] memory) {
-        return patientResponses[patientAddress];
-    }
-        function getRegisteredUsers() public view returns (address[] memory registeredDonors, address[] memory registeredPatients) {
-        return (donorAddresses, patientAddresses);
-    }
 }
 
